@@ -1,25 +1,38 @@
 package dev.idee.rxjavacoroutines
 
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import io.reactivex.Single
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.observers.DisposableSingleObserver
+import io.reactivex.rxkotlin.addTo
+import io.reactivex.schedulers.Schedulers
 
 class BlankViewModel : ViewModel() {
 
-    lateinit var liveDataString: LiveData<String>
+    private val disposables = CompositeDisposable()
+
+    private val observer = object: DisposableSingleObserver<List<JobModel>>() {
+        override fun onSuccess(t: List<JobModel>) {}
+        override fun onError(e: Throwable) {}
+    }
 
     init {
 
-        viewModelScope.launch {
+        fetchWebJobs()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeWith<DisposableSingleObserver<List<JobModel>>>(observer)
+            .addTo(disposables)
 
-            liveDataString = liveData(Dispatchers.IO) {
-                emit("Test String")
-            }
+    }
 
-        }
+    private fun fetchWebJobs(): Single<List<JobModel>> {
+
+        return ApiClient.client.getWebJobs(1)
+//        return ApiClient.client.getWebJobs(1).flatMap { list ->
+//            return@flatMap Single.just(list)
+//        }
 
     }
 
